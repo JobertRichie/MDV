@@ -1,0 +1,678 @@
+---
+title: "Verneuil Disease_Analysis"
+author: "Nansseu JR"
+date: "2025-10-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+# Présentation
+
+Cette analyse présente les résultats d'une étude transversale descriptive sur le profil épidémiologique et clinique de la **Maladie de Verneuil** au sein d'une population noire africaine. Les analyses sont faites à l'aide de R version 4.5.1 (R Core Team, 2025, R Foundation for Statistical Computing, Vienna, Austria) [ref](https://www.R-project.org/). Les données qualitatives sont résumées par les fréquences et pourcentages. tandis que les données quantitatives le sont par la moyenne +/- écart-type (ET) ou médiane (intervalle inter-quartile) selon que la variable suit ou non une distribution normale. La normalité a été évaluée par le test de Shapiro-Wilk. Tableaux et figures servent à la présentation de ces résumés. Le test non-paramétrique de Wilcoxon a été utilisé pour la comparaison de variables quantitatives, avec un seuil de significativé fixé à p < 0,05.
+
+# Importation des packages et de la base des données
+
+```{r echo = F}
+# Importing the packages
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(tidyverse,
+               dplyr,
+               forcats,
+               gtsummary,
+               reactable,
+               Rtools,
+               here,
+               janitor,
+               readxl,
+               ggplot,
+               plotly,
+               ggrepel,
+               flextable,
+               kableExtra)
+
+# Importing the dataset
+mdv <- read_xlsx(
+  path = here("data/maladie_de_verneuil_3.xlsx"),
+  sheet = "Maladie de Verneuil",
+  range = "A1:AI50",
+  col_names = TRUE) %>% 
+  clean_names()
+```
+
+La base de données importée dispose de 35 variables pour 49 observations. Les analyses qui suivent sont donc présentées pour un total de **49 patients**.
+
+# Configuration des données
+
+Le tableau ci-dessous présente les différentes fréquences absolues et pourcentages de chaque modalité des variables renseignées.
+
+```{r}
+#Summary table of variables
+# mdv %>%
+#   tbl_summary() #%>%
+# # #   as_kable() %>%  ##importer le package kableExtra
+# #   kable_styling()
+# # # #OR
+mdv %>%
+  tbl_summary() %>%
+  as_flex_table()
+```
+
+# Analyses univariées
+
+## Distribution d'âge et sexe
+
+```{r}
+# Normality test on age
+shapiro.test(mdv$age_annees) ##W = 0.98525, p-value = 0.7918
+
+#Age summary
+summary(mdv$age_annees)
+sd(mdv$age_annees)
+
+# Defining age categories
+mdv <- mdv %>% 
+  mutate(tranche_age = case_when(
+    age_annees>=10 & age_annees<20 ~ "10-19",
+    age_annees>=20 & age_annees<30 ~ "20-29",
+    age_annees>=30 & age_annees<40 ~ "30-39",
+    age_annees>=40 & age_annees<50 ~ "40-49",
+    age_annees>=50 & age_annees<60 ~ "50-59",
+    age_annees>=60 ~ "60+"
+  ))
+
+#Summary table of "tranches d'âge"
+mdv %>% 
+  count(tranche_age) %>% 
+  mutate(pct = round(n/sum(n)*100, digits = 1)) %>% 
+  reactable()
+
+# Figure showing age distribution
+fig1 <- 
+  mdv %>% 
+  count(tranche_age) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = tranche_age,
+                       y = n,
+                       fill = tranche_age)) +
+  geom_col(linewidth = 0.5,
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Tranche d'âge (années)",
+       y = "Nombre de patients") +
+  theme(legend.position = "none")
+
+fig1
+```
+
+```{r}
+#Saving age distribution
+ggsave(plot = fig1,
+       filename = here("outputs/Figure_1.jpg"),
+       width = 8,
+       height = 6)
+```
+
+Les âges des patients varient de 10 à 63 ans, avec une moyenne de 34,5 +/- 10,2 ans. La tranche d'âge la plus représentée est celle des 30-39 ans (n = 21; 42,9%), suivie des 20-29 ans (n = 13; 26,5%).
+
+Les femmes (n = 29; 59,2%)) représentent près de 3/5 des patients.
+
+```{r}
+#Age distribution with different format
+fig1_bis <- 
+  mdv %>% 
+  count(tranche_age) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = tranche_age,
+                       y = n)) +
+  geom_col(linewidth = 0.5,
+           fill = "#1f78b4",
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Tranche d'âge (années)",
+       y = "Nombre de patients") +
+  theme(legend.position = "none")
+
+fig1_bis
+
+#Saving the figure
+ggsave(plot = fig1_bis,
+       filename = here("outputs/Figure_1bis.jpg"),
+       width = 8,
+       height = 6)
+```
+## Motifs de consultation
+
+```{r}
+# Figure displaying Motifs de consultation
+fig2 <- 
+  ggplot(data = mdv,
+       mapping = aes(y = fct_infreq(motif_de_consultation),
+                     fill = motif_de_consultation)) + 
+  geom_bar(color = "white") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Motifs de consultation") +
+  theme(legend.position = "none")
+
+fig2
+
+```
+
+
+```{r}
+#Saving Fig 2
+ggsave(plot = fig2,
+       filename = here("outputs/Figure_2.jpg"),
+       width = 10,
+       height = 6)
+```
+
+
+```{r}
+#Fig 2 with different format
+fig2_bis <- 
+  ggplot(data = mdv,
+       mapping = aes(y = fct_infreq(motif_de_consultation))) + 
+  geom_bar(color = "white",
+           fill = "#1f78b4") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Motifs de consultation") +
+  theme(legend.position = "none") ## + scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
+
+fig2_bis
+
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig2_bis,
+       filename = here("outputs/Figure_2bis.jpg"),
+       width = 10,
+       height = 6)
+```
+
+## Délai d'évolution
+
+```{r}
+# Normality test on "délai d'évolution"
+shapiro.test(mdv$delai_devolution_en_mois) # W = 0.83295, p-value = 1.999e-05; cette variable n'est pas normale
+
+summary(mdv$delai_devolution_en_mois)
+
+```
+Pour les 43 patients dont les données sont disponibles, le délai d'évolution de la maladie varie de 0 à 120 mois, avec une médiane de 24 mois (IQR 7-48).
+
+```{r}
+# Splitting delai d'evolution into classes
+mdv <- mdv %>% 
+  mutate(evolution_class = case_when(
+    delai_devolution_en_mois <= 11 ~ "0-11",
+    delai_devolution_en_mois >11 & delai_devolution_en_mois<=23 ~ "12-23",
+    delai_devolution_en_mois >23 & delai_devolution_en_mois<=35 ~ "24-35",
+    delai_devolution_en_mois >35 & delai_devolution_en_mois<=47 ~ "36-47",
+    delai_devolution_en_mois >47 & delai_devolution_en_mois<=59 ~ "48-59",
+    delai_devolution_en_mois >=60 ~ "60+"
+  ))
+
+#Creating an histogram for evolution_class
+fig3 <- 
+  mdv %>% 
+  filter(!is.na(delai_devolution_en_mois)) %>% 
+  count(evolution_class) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = evolution_class,
+                       y = n,
+                       fill = evolution_class)) +
+  geom_col(linewidth = 0.5,
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Durée d'évolution de la maladie (mois)",
+       y = "Nombre de patients (n = 43") +
+  theme(legend.position = "none")
+
+fig3
+
+```
+
+```{r}
+#Saving Fig 3
+ggsave(plot = fig3,
+       filename = here("outputs/Figure_3.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+# Displaying fig 3 in a different format
+fig3_bis <- 
+  mdv %>% 
+  filter(!is.na(delai_devolution_en_mois)) %>% 
+  count(evolution_class) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = evolution_class,
+                       y = n)) +
+  geom_col(linewidth = 0.5,
+           fill = "forestgreen",
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Durée d'évolution de la maladie (mois)",
+       y = "Nombre de patients (n = 43") +
+  theme(legend.position = "none")
+
+fig3_bis
+
+#Saving the figure
+ggsave(plot = fig3_bis,
+       filename = here("outputs/Figure_3bis.jpg"),
+       width = 8,
+       height = 6)
+```
+
+## Facteurs de risque retrouvé
+
+```{r}
+#Preparing the data for plotting
+fr <- mdv %>% 
+  count(facteurs_de_risque) %>% 
+  mutate(pct = round(n/sum(n)*100, digits = 1),
+        #defining the positions for the labels to add
+         csum = rev(cumsum(rev(n))), 
+         pos = n/2 + lead(csum, 1),
+         pos = if_else(is.na(pos), n/2, pos)
+         ) 
+fr
+
+#Pie chart showing identified potential risk factors
+fig4 <- 
+  ggplot(data = fr,
+       mapping = aes(x = 4,
+                     y = n,
+                     fill = fct_inorder(facteurs_de_risque))) +
+  geom_col(color = "white",
+           linewidth = 1) +
+  coord_polar(theta = "y") +
+  geom_label_repel(data = fr,
+                   aes(y = pos,
+                       label = paste0(pct, "%")),
+                   size = 4,
+                   color = "white",
+                   fontface = "bold",
+                   nudge_x = 1,
+                   show.legend = F) +
+  labs(fill = "Facteur de risque") +
+  theme_void()
+
+fig4
+
+#Saving the figure
+ggsave(plot = fig4,
+       filename = here("outputs/Figure_4.jpg"),
+       width = 8,
+       height = 6)
+  
+```
+
+## Siège de début des lésions
+
+```{r}
+#Preparing the data for plotting
+s_lesion <- 
+  mdv %>% 
+  count(siege_de_debut) %>%
+  mutate(pct = round(n/sum(n)*100, digits = 1),
+        #defining the positions for the labels to add
+         csum = rev(cumsum(rev(n))), 
+         pos = n/2 + lead(csum, 1),
+         pos = if_else(is.na(pos), n/2, pos)
+         ) 
+
+#Ordering the modalities of the variable siege_de_debut
+s_lesion <- s_lesion %>% 
+   mutate(siege_de_debut_ord = fct_reorder(siege_de_debut, n, .desc = TRUE
+         )) 
+
+s_lesion
+
+#Pie chart showing initial sites of lesions
+fig5 <- 
+  ggplot(data = s_lesion,
+         mapping = aes(x = 4,
+                       y = n,
+                       fill = fct_inorder(siege_de_debut_ord))) +
+  geom_col(color = "white",
+           linewidth = 1) +
+  coord_polar(theta = "y") +
+  geom_label_repel(data = s_lesion,
+                   aes(y = pos,
+                       label = paste0(pct, "%")),
+                   size = 4,
+                   color = "black",
+                   fontface = "bold",
+                   nudge_x = 1,
+                   show.legend = F) +
+  labs(fill = "Siège initial des lésions") +
+  theme_void() 
+
+fig5
+
+#Saving Fig5
+ggsave(plot = fig5,
+       filename = here("outputs/Figure_5.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+# Displaying the distribution of initial sites of lesions with a different plot
+fig5_2 <- 
+  ggplot(data = mdv,
+         mapping = aes(y = fct_infreq(siege_de_debut))) + 
+  geom_bar(color = "white",
+           fill = "#1f78b4") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Siège initial des lésions") +
+  theme(legend.position = "none") +
+  scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
+
+fig5_2
+
+#Saving the figure in a jpg format
+ggsave(plot = fig5_2,
+       filename = here("outputs/Figure_4_2.jpg"),
+       width = 8,
+       height = 6)
+
+```
+
+```{r}
+# Displaying the distribution of initial sites of lesions with a different plot & format
+fig5_3 <- 
+  ggplot(data = mdv,
+         mapping = aes(y = fct_infreq(siege_de_debut),
+                       fill = siege_de_debut)) + 
+  geom_bar(color = "white") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Siège initial des lésions") +
+  theme(legend.position = "none") +
+  scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
+
+fig5_3
+
+#Saving the figure in a jpg format
+ggsave(plot = fig5_3,
+       filename = here("outputs/Figure_5_3.jpg"),
+       width = 8,
+       height = 6)
+```
+
+## Siège actuel des lésions
+
+```{r}
+#Bar chart showing the distribution of current sites of lesions
+fig6 <- 
+  ggplot(data = mdv,
+         mapping = aes(y = fct_infreq(sieges),
+                       fill = sieges)) + 
+  geom_bar(color = "white") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Siège actuel des lésions") +
+  theme(legend.position = "none") +
+  scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
+
+fig6
+
+#Saving the figure in a jpg format
+ggsave(plot = fig6,
+       filename = here("outputs/Figure_6.jpg"),
+       width = 10,
+       height = 6)
+```
+
+## Types de lésions
+
+```{r}
+# Bar chart displaying the types of lesions
+fig7 <- 
+  ggplot(data = mdv,
+         mapping = aes(y = fct_infreq(types_de_lesions),
+                       fill = types_de_lesions)) + 
+  geom_bar(color = "white") + 
+  geom_text(stat = "count",
+            mapping = aes(label = ..count..),
+            color = "black",
+            hjust = -0.5,
+            fontface = "bold") +
+  labs(x = "Nombre de patients",
+       y = "Types de lésions") +
+  theme(legend.position = "none") +
+  scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
+
+fig7
+
+#Saving the figure
+ggsave(plot = fig7,
+       filename = here("outputs/Figure_7.jpg"),
+       width = 12,
+       height = 6)
+```
+
+## Classification clinique de Hurley
+
+```{r}
+#Preparing the data for plotting
+clin_class <- 
+  mdv %>% 
+  count(classification_de_hurley) %>% 
+  mutate(pct = round(n/sum(n)*100, digits = 1),
+        #defining the positions for the labels to add
+         csum = rev(cumsum(rev(n))), 
+         pos = n/2 + lead(csum, 1),
+         pos = if_else(is.na(pos), n/2, pos)
+         ) 
+clin_class
+
+#Pie chart showing the different clinical stages
+fig8 <- 
+  ggplot(data = clin_class,
+         mapping = aes(x = 4,
+                       y = n,
+                       fill = fct_inorder(classification_de_hurley))) +
+  geom_col(color = "white",
+           linewidth = 1) +
+  coord_polar(theta = "y") +
+  geom_label_repel(data = clin_class,
+                   aes(y = pos,
+                       label = paste0(pct, "%")),
+                   size = 4,
+                   color = "white",
+                   fontface = "bold",
+                   nudge_x = 1,
+                   show.legend = F) +
+  labs(fill = "Classification clinique de Hurley") +
+  theme_void() 
+
+fig8
+
+#Saving Fig 8 in a jpg format
+ggsave(plot = fig8,
+       filename = here("outputs/Figure_8.jpg"),
+       width = 8,
+       height = 6)
+```
+
+## Qualité de vie
+
+```{r}
+# Normality test on QoL
+shapiro.test(mdv$total_dlqi) # W = 0.70405, p-value = 3.094e-05
+
+#QoL summary
+summary(mdv$total_dlqi)
+
+```
+
+Des 21 patients pour lesquels l'information est disponible, le score DLQI varie de 1 à 13, avec une médiane de 2 (EIQ: 2-4). 
+
+```{r}
+#Categorizing the QoL score
+mdv <- mdv %>% 
+  mutate(
+    total_dlqi = as.numeric(total_dlqi),
+    qdv = case_when(
+    total_dlqi<=1 ~ "QdV non altérée",
+    total_dlqi>1 & total_dlqi<6 ~ "Faible altération",
+    total_dlqi>5 & total_dlqi<11 ~ "Altération modérée",
+    total_dlqi>10 & total_dlqi<21 ~ "Altération importante",
+    total_dlqi>20 & total_dlqi<=30 ~ "Altération extrêmement importante",
+    TRUE ~ "Données non disponibles"
+  ))
+
+#Summary table of QoL categories
+mdv %>% 
+  count(qdv) %>% 
+  mutate(pct = round(n/sum(n)*100, digits = 1)) %>% 
+  arrange(desc(n)) %>% 
+  reactable()
+
+```
+
+Aucun patient ne présente une altération extrêmement importante. Cependant, 4 patients (8,2%) présentent une altération modérée à importante de la QdV. En outre, 12 patients (24,5%) présentent une faible altération de la QdV tandis que 5 patients (10,2%) ne présentent aucune altération de leur QdV.
+
+```{r}
+#Preparing data for plotting
+qol <- 
+  mdv %>% 
+  count(qdv) %>% 
+  mutate(pct = round(n/sum(n)*100, digits = 1),
+        #defining the positions for the labels to add
+         csum = rev(cumsum(rev(n))), 
+         pos = n/2 + lead(csum, 1),
+         pos = if_else(is.na(pos), n/2, pos)
+         ) 
+qol
+
+#Pie chart showing the different levels of altered QoL
+fig9 <- 
+  ggplot(data = qol,
+         mapping = aes(x = 4,
+                       y = n,
+                       fill = fct_inorder(qdv))) +
+  geom_col(color = "white",
+           linewidth = 1) +
+  coord_polar(theta = "y") +
+  geom_label_repel(data = qol,
+                   aes(y = pos,
+                       label = paste0(pct, "%")),
+                   size = 4,
+                   color = "white",
+                   fontface = "bold",
+                   nudge_x = 1,
+                   show.legend = F) +
+  labs(fill = "Qualité de vie") +
+  theme_void() 
+
+fig9
+
+#Saving the figure
+ggsave(plot = fig9,
+       filename = here("outputs/Figure_9.jpg"),
+       width = 8,
+       height = 6)
+```
+
+# Analyse bivariée
+## Distribution de la QdV selon le sexe
+
+```{r}
+#Box plot showing the distribution of QoL by sex
+fig10 <- 
+  ggplot(data = mdv,
+         mapping = aes(y = total_dlqi,
+                       x = sexe,
+                       fill = sexe)) +
+  geom_boxplot(color = "black",
+               linewidth = 0.4) + 
+  geom_jitter(color = "black",
+              width = 0.2,
+              size = 1,
+              alpha = 0.3) +
+  labs(y = "Qualité de vie",
+       x = "Sexe") + 
+  theme(legend.position = "none")
+
+fig10
+
+#Saving the figure
+ggsave(plot = fig10,
+       filename = here("outputs/Figure_10.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+# Test de Wilcoxon; pour rappel: variable non ghaussienne
+wilcox.test(total_dlqi ~ sexe, data = mdv) ##W = 25.5, p-value = 0.03432, inférieur à 0.05
+
+mdv %>% 
+  group_by(sexe) %>% 
+  summarise(median = median(total_dlqi, na.rm = TRUE),
+            first_q = quantile(total_dlqi, probs = 0.25, na.rm = TRUE),
+            third_q = quantile(total_dlqi, probs = 0.75, na.rm = TRUE)) %>% 
+  reactable()
+```
+
+Une comparaison des scores de qualité de vie entre hommes et femmes montre que les hommes ont une tendance à une altération de qdv plus marquée que chez les femmes, avec une différence statistiquement signficative: médiane 3 (EIQ 2-8) vs 2,0 (EIQ 1-2); p = 0,034 (Figure 10).
+
+
+
+
+
