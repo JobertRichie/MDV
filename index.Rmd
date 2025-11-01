@@ -2,8 +2,19 @@
 title: "Verneuil Disease_Analysis"
 author: "Nansseu JR"
 date: "2025-10-23"
-output: html_document
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    toc: true
+editor_options: 
+  chunk_output_type: console
 ---
+
+<style>
+body {
+text-align: justify}
+</style>
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,
@@ -357,6 +368,39 @@ ggsave(plot = fig4,
        height = 6)
 ```
 
+```{r}
+# Donut chart showing facteurs d'exposition
+ fig4_2 <- 
+  ggplot(result2,
+         aes(x = 2,
+             y = n,
+             fill = facteurs_de_risque)) +
+  geom_col(position = "fill",
+           color = "white",
+           linewidth = 1) +
+  geom_text(aes(label = paste0(pct, "%")), #adding the labels
+            position = position_fill(vjust = 0.5),
+            color = "black",
+            fontface = "bold",
+            show.legend = F,
+            size = 5
+            ) +
+  coord_polar(theta = "y") +
+  xlim(c(0.2, 2 + 0.5)) +
+  labs(fill = "Facteur d'exposition") +
+  theme_void()
+
+fig4_2
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig4_2,
+       filename = here("outputs/Figure_4b.jpg"),
+       width = 8,
+       height = 6)
+```
+
 Globalement, trois potentiels facteurs d'exposition sont retrouvés, notamment l'obésité (n = 7; 14,3%), l'hérédité (n = 5; 10,2%) et le tabac (n = 4; 8,2%). Un patient (2,0%) présente deux facteurs d'exposition (obésité et tabac). Cependant, aucun facteur d'exposition n'est retrouvé chez la majorité des patients (n = 29; 59,2%).
 
 ## Siège de début des lésions
@@ -418,6 +462,38 @@ fig5
 #Saving Fig5
 ggsave(plot = fig5,
        filename = here("outputs/Figure_5.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+fig5_2 <- 
+  ggplot(result3,
+         aes(x = 2,
+             y = n,
+             fill = siege_de_debut)) +
+  geom_col(position = "fill",
+           color = "white",
+           linewidth = 1) +
+  geom_text(aes(label = paste0(pct, "%")), #adding the labels
+            position = position_fill(vjust = 0.5),
+            color = "black",
+            fontface = "bold",
+            show.legend = F,
+            size = 4
+            ) +
+  coord_polar(theta = "y") +
+  xlim(c(0.2, 2 + 0.5)) +
+  labs(fill = "Siège de début") +
+  theme_void()
+
+fig5_2
+```
+
+```{r}
+#Saving Fig5b
+ggsave(plot = fig5_2,
+       filename = here("outputs/Figure_5b.jpg"),
        width = 8,
        height = 6)
 ```
@@ -676,6 +752,39 @@ ggsave(plot = fig8,
        height = 6)
 ```
 
+```{r}
+fig8_2 <- 
+  ggplot(result6,
+         aes(x = 2,
+             y = n,
+             fill = classification_de_hurley)) +
+  geom_col(position = "fill",
+           color = "white",
+           linewidth = 1) +
+  geom_text(aes(label = paste0(pct, "%")), #adding the labels
+            position = position_fill(vjust = 0.5),
+            color = "black",
+            fontface = "bold",
+            show.legend = F,
+            size = 5
+            ) +
+  coord_polar(theta = "y") +
+  xlim(c(0.2, 2 + 0.5)) +
+  labs(fill = "Classification clinique de Hurley") +
+  theme_void()
+
+fig8_2
+```
+
+```{r}
+#Saving Fig 9b in a jpg format
+ggsave(plot = fig8_2,
+       filename = here("outputs/Figure_8b.jpg"),
+       width = 8,
+       height = 6)
+```
+
+
 Plus de la moitié des patients (n = 28; 57,1%) sont au stade 1 de la maladie tandis que 19 patients (38,8%) sont au stade 2. Seuls 2 patients (4,1%) sont au stade 3 de la maladie.
 
 ## Qualité de vie
@@ -766,6 +875,40 @@ ggsave(plot = fig9,
        width = 8,
        height = 6)
 ```
+
+```{r}
+# Donut chart showing Qualité de vie
+ fig9_2 <- 
+  ggplot(result7,
+         aes(x = 2,
+             y = n,
+             fill = qdv)) +
+  geom_col(position = "fill",
+           color = "white",
+           linewidth = 1) +
+  geom_text(aes(label = paste0(pct, "%")), #adding the labels
+            position = position_fill(vjust = 0.5),
+            color = "black",
+            fontface = "bold",
+            show.legend = F,
+            size = 5
+            ) +
+  coord_polar(theta = "y") +
+  xlim(c(0.2, 2 + 0.5)) +
+  labs(fill = "Qualité de vie") +
+  theme_void()
+
+fig9_2
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig9_2,
+       filename = here("outputs/Figure_9b.jpg"),
+       width = 8,
+       height = 6)
+```
+
 
 # Analyse bivariée
 
@@ -901,3 +1044,51 @@ mdv %>%
 ```
 
 La figure 12 montre clairement que le score de qualité de vie semble intimement lié au stade de la maladie. En effet, l'altération de la qualité de vie semble s'ampirer avec le stade de la maladie, avec une différence statistiqument significative entre les trois stades: médiane 2 (EIQ 1-2) vs 3 (EIQ 2-4,5) vs 13 (EIQ 13-13) respectivement pour les stades 1, 2 et 3; p = 0,02.
+
+## Corrélation entre qualité de vie et durée d'évolution de la maladie
+
+```{r}
+#Removing NAq
+mdv_corr <- mdv %>% 
+  filter(!is.na(delai_devolution_en_mois)) %>% 
+  filter(!is.na(total_dlqi))
+
+#Correlation test 
+cor.test(mdv_corr$delai_devolution_en_mois,
+         mdv_corr$total_dlqi,
+         method = "spearman") # If both variables were normally distributed, you could use method = "pearson" for Pearson's correlation.
+
+# Result rho = 0.08418363; S = 1410.4, p-value = 0.7168
+```
+
+```{r}
+fig13 <- 
+  ggplot(data = mdv_corr,
+         mapping = aes(x = delai_devolution_en_mois,
+                       y = total_dlqi)) + 
+  geom_point(size = 2,
+             color = "red") +
+  labs(x = "Durée d'évolution de la maladie (mois)",
+       y = "Score DLQI mesurant la QdV")
+
+fig13
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig13,
+       filename = here("outputs/Figure_13.jpg"),
+       width = 8,
+       height = 6)
+```
+
+
+```{r}
+summary(mdv$delai_devolution_en_mois)
+sd(mdv$delai_devolution_en_mois, na.rm  =T)
+
+mdv %>% 
+  filter(collecte_de_donnees == "Prospective") %>% 
+  summarise(summary = summary(delai_devolution_en_mois, na.rm = T))
+```
+
