@@ -2,10 +2,7 @@
 title: "Verneuil Disease_Analysis"
 author: "Nansseu JR"
 date: "2025-10-23"
-output: 
-  prettydoc::html_pretty:
-    theme: architect
-    toc: true
+output: html_document
 editor_options: 
   chunk_output_type: console
 ---
@@ -24,7 +21,7 @@ knitr::opts_chunk$set(echo = FALSE,
 
 # Présentation
 
-Cette analyse présente les résultats d'une étude transversale descriptive sur le profil épidémiologique et clinique de la **Maladie de Verneuil** au sein d'une population noire africaine. Les analyses sont faites à l'aide de R version 4.5.1 (R Core Team, 2025, R Foundation for Statistical Computing, Vienna, Austria) [ref](https://www.R-project.org/). Les données qualitatives sont résumées par les fréquences et pourcentages. tandis que les données quantitatives le sont par la moyenne +/- écart-type (ET) ou médiane (intervalle inter-quartile) selon que la variable suit ou non une distribution normale. La normalité a été évaluée par le test de Shapiro-Wilk. Tableaux et figures servent à la présentation de ces résumés. Les tests non-paramétriques de Wilcoxon et Kruskal-Wallis ont été utilisés pour la comparaison de variables quantitatives, avec un seuil de significativé fixé à p < 0,05.
+Cette analyse présente les résultats d'une étude transversale descriptive sur le profil épidémiologique et clinique de la **Maladie de Verneuil** au sein d'une population noire africaine. Les analyses sont faites à l'aide de R version 4.5.2 (R Core Team, 2025, R Foundation for Statistical Computing, Vienna, Austria) [ref](https://www.R-project.org/). Les données qualitatives sont résumées par les fréquences et pourcentages. tandis que les données quantitatives le sont par la moyenne +/- écart-type (ET) ou médiane (intervalle inter-quartile, IIQ) selon que la variable suit ou non une distribution normale. La normalité a été évaluée par le test de Shapiro-Wilk. Tableaux et figures servent à la présentation de ces résumés. Les tests non-paramétriques de Wilcoxon et Kruskal-Wallis ont été utilisés pour la comparaison de variables quantitatives tandis que le test de Chi-2 ou le test exact de Fisher ont été utilisés pour comparer les variables qualitatives, avec un seuil de significativité fixé à p < 0,05.
 
 # Importation des packages et de la base des données
 
@@ -36,11 +33,11 @@ pacman::p_load(tidyverse,
                forcats,
                gtsummary,
                reactable,
-               Rtools,
+               Rtools44,
                here,
                janitor,
                readxl,
-               ggplot,
+               ggplot2,
                plotly,
                ggrepel,
                flextable,
@@ -56,7 +53,7 @@ mdv <- read_xlsx(
   clean_names()
 ```
 
-La base de données importée dispose de 35 variables pour 49 observations. Les analyses qui suivent sont donc présentées pour un total de **49 patients**.
+La base de données importée dispose de `r ncol(mdv)` 35 variables pour `r nrow(mdv)` observations. Les analyses qui suivent sont donc présentées pour un total de **`r nrow(mdv)`** patients.
 
 # Configuration des données
 
@@ -107,28 +104,51 @@ mdv %>%
 
 ```{r}
 # Figure showing age distribution
+# fig1 <- 
+#   mdv %>% 
+#   count(tranche_age) %>% 
+#   arrange(desc(n)) %>% 
+#   ggplot(mapping = aes(x = tranche_age,
+#                        y = n,
+#                        fill = tranche_age)) +
+#   geom_col(linewidth = 0.5,
+#            color = "white",
+#            width = 1) + 
+#   geom_text(mapping = aes(label = n),
+#             position = position_stack(vjust = 0.5),
+#             color = "white",
+#             fontface = "bold",
+#             size = 4) +
+#   labs(x = "Tranche d'âge (années)",
+#        y = "Nombre de patients") +
+#   theme(legend.position = "none")
+# 
+# fig1
+
 fig1 <- 
   mdv %>% 
   count(tranche_age) %>% 
   arrange(desc(n)) %>% 
   ggplot(mapping = aes(x = tranche_age,
-                       y = n,
-                       fill = tranche_age)) +
-  geom_col(linewidth = 0.5,
+                       y = n)) +
+  geom_col(fill = "#1f78b4",
+           position = "stack",
+           linewidth = 0.5,
            color = "white",
            width = 1) + 
-  geom_text(mapping = aes(label = n),
-            position = position_stack(vjust = 0.5),
+  geom_text(mapping = aes(label = n,
+                          y = n/2),
             color = "white",
             fontface = "bold",
             size = 4) +
   labs(x = "Tranche d'âge (années)",
        y = "Nombre de patients") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  theme_minimal()
 
 fig1
-```
 
+```
 
 ```{r}
 #Saving age distribution
@@ -136,6 +156,38 @@ ggsave(plot = fig1,
        filename = here("outputs/Figure_1.jpg"),
        width = 8,
        height = 6)
+```
+
+```{r}
+fig1b <- 
+  mdv %>% 
+  count(tranche_age) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = tranche_age,
+                       y = n)) +
+  geom_col(fill = "forestgreen",
+           position = "stack",
+           linewidth = 0.5,
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n,
+                          y = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Tranche d'âge (années)",
+       y = "Nombre de patients") +
+  theme(legend.position = "none") +
+  theme_minimal()
+
+fig1b
+
+#Saving age distribution
+ggsave(plot = fig1b,
+       filename = here("outputs/Figure_1b.jpg"),
+       width = 8,
+       height = 6)
+
 ```
 
 Les âges des patients varient de 10 à 63 ans, avec une moyenne de 34,5 +/- 10,2 ans. La tranche d'âge la plus représentée est celle des 30-39 ans (n = 21; 42,9%), suivie des 20-29 ans (n = 13; 26,5%).
@@ -167,21 +219,40 @@ result1 %>%
 
 ```{r}
 # Figure displaying various "motifs de consultation"
+# fig2 <- 
+#   ggplot(data = result1,
+#          mapping = aes(y = fct_reorder(motif_de_consultation, n, .desc = FALSE), #classe par ordre croissant
+#                        x = n,
+#                        fill = motif_de_consultation)) +
+#   geom_col(linewidth = 0.3,
+#            color = "white") + 
+#   geom_text(mapping = aes(label = n),
+#             position = position_stack(vjust = 0.5),
+#             color = "white",
+#             fontface = "bold",
+#             size = 4) +
+#   labs(x = "Nombre de patients",
+#        y = "Motifs de consultation") +
+#   theme(legend.position = "none")
+# 
+# fig2
+
 fig2 <- 
   ggplot(data = result1,
          mapping = aes(y = fct_reorder(motif_de_consultation, n, .desc = FALSE), #classe par ordre croissant
-                       x = n,
-                       fill = motif_de_consultation)) +
-  geom_col(linewidth = 0.3,
+                       x = n)) +
+  geom_col(fill = "#1f78b4",
+           linewidth = 0.3,
            color = "white") + 
-  geom_text(mapping = aes(label = n),
-            position = position_stack(vjust = 0.5),
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
             color = "white",
             fontface = "bold",
             size = 4) +
   labs(x = "Nombre de patients",
        y = "Motifs de consultation") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  theme_minimal()
 
 fig2
 ```
@@ -190,6 +261,33 @@ fig2
 #Saving Fig 2
 ggsave(plot = fig2,
        filename = here("outputs/Figure_2.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+fig2b <- 
+  ggplot(data = result1,
+         mapping = aes(y = fct_reorder(motif_de_consultation, n, .desc = FALSE), #classe par ordre croissant
+                       x = n)) +
+  geom_col(fill = "forestgreen",
+           linewidth = 0.3,
+           color = "white") + 
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Nombre de patients",
+       y = "Motifs de consultation") +
+  theme(legend.position = "none") +
+  theme_minimal()
+
+fig2b
+
+#Saving Fig 2b
+ggsave(plot = fig2b,
+       filename = here("outputs/Figure_2b.jpg"),
        width = 8,
        height = 6)
 ```
@@ -240,25 +338,48 @@ mdv <- mdv %>%
   ))
 
 #Creating an histogram for evolution_class
+# fig3 <- 
+#   mdv %>% 
+#   filter(!is.na(delai_devolution_en_mois)) %>% 
+#   count(evolution_class) %>% 
+#   arrange(desc(n)) %>% 
+#   ggplot(mapping = aes(x = evolution_class,
+#                        y = n,
+#                        fill = evolution_class)) +
+#   geom_col(linewidth = 0.5,
+#            color = "white",
+#            width = 1) + 
+#   geom_text(mapping = aes(label = n),
+#             position = position_stack(vjust = 0.5),
+#             color = "white",
+#             fontface = "bold",
+#             size = 4) +
+#   labs(x = "Durée d'évolution de la maladie (mois)",
+#        y = "Nombre de patients (n = 43") +
+#   theme(legend.position = "none")
+# 
+# fig3
+
 fig3 <- 
   mdv %>% 
   filter(!is.na(delai_devolution_en_mois)) %>% 
   count(evolution_class) %>% 
   arrange(desc(n)) %>% 
   ggplot(mapping = aes(x = evolution_class,
-                       y = n,
-                       fill = evolution_class)) +
-  geom_col(linewidth = 0.5,
+                       y = n)) +
+  geom_col(fill = "#1f78b4",
+           linewidth = 0.5,
            color = "white",
            width = 1) + 
-  geom_text(mapping = aes(label = n),
-            position = position_stack(vjust = 0.5),
+  geom_text(mapping = aes(label = n,
+                          y = n/2),
             color = "white",
             fontface = "bold",
             size = 4) +
   labs(x = "Durée d'évolution de la maladie (mois)",
        y = "Nombre de patients (n = 43") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") + 
+  theme_minimal()
 
 fig3
 
@@ -273,34 +394,34 @@ ggsave(plot = fig3,
 ```
 
 ```{r}
-# # Displaying fig 3 in a different format
-# fig3_bis <- 
-#   mdv %>% 
-#   filter(!is.na(delai_devolution_en_mois)) %>% 
-#   count(evolution_class) %>% 
-#   arrange(desc(n)) %>% 
-#   ggplot(mapping = aes(x = evolution_class,
-#                        y = n)) +
-#   geom_col(linewidth = 0.5,
-#            fill = "forestgreen",
-#            color = "white",
-#            width = 1) + 
-#   geom_text(mapping = aes(label = n),
-#             position = position_stack(vjust = 0.5),
-#             color = "white",
-#             fontface = "bold",
-#             size = 4) +
-#   labs(x = "Durée d'évolution de la maladie (mois)",
-#        y = "Nombre de patients (n = 43") +
-#   theme(legend.position = "none")
-# 
-# fig3_bis
-# 
-# #Saving the figure
-# ggsave(plot = fig3_bis,
-#        filename = here("outputs/Figure_3bis.jpg"),
-#        width = 8,
-#        height = 6)
+fig3b <- 
+  mdv %>% 
+  filter(!is.na(delai_devolution_en_mois)) %>% 
+  count(evolution_class) %>% 
+  arrange(desc(n)) %>% 
+  ggplot(mapping = aes(x = evolution_class,
+                       y = n)) +
+  geom_col(fill = "forestgreen",
+           linewidth = 0.5,
+           color = "white",
+           width = 1) + 
+  geom_text(mapping = aes(label = n,
+                          y = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Durée d'évolution de la maladie (mois)",
+       y = "Nombre de patients (n = 43") +
+  theme(legend.position = "none") + 
+  theme_minimal()
+
+fig3b
+
+#Saving Fig 3b
+ggsave(plot = fig3b,
+       filename = here("outputs/Figure_3b.jpg"),
+       width = 8,
+       height = 6)
 ```
 
 ## Facteurs de risque retrouvé
@@ -608,21 +729,40 @@ result4 %>%
 #   theme(legend.position = "none") +
 #   scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
 
+# fig6 <- 
+#   ggplot(data = result4,
+#          mapping = aes(y = reorder(sieges, n, .desc = FALSE),
+#                        x = n,
+#                        fill = sieges)) +
+#   geom_col(linewidth = 0.3,
+#            color = "white") + 
+#   geom_text(mapping = aes(label = n),
+#             hjust = -0.5,
+#             color = "black",
+#             fontface = "bold",
+#             size = 4) +
+#   labs(x = "Nombre de patients",
+#        y = "Siège actuel") +
+#   theme(legend.position = "none")
+# 
+# fig6
+
 fig6 <- 
   ggplot(data = result4,
          mapping = aes(y = reorder(sieges, n, .desc = FALSE),
-                       x = n,
-                       fill = sieges)) +
+                       x = n)) +
   geom_col(linewidth = 0.3,
+           fill = "#1f78b4",
            color = "white") + 
-  geom_text(mapping = aes(label = n),
-            hjust = -0.5,
-            color = "black",
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
+            color = "white",
             fontface = "bold",
             size = 4) +
   labs(x = "Nombre de patients",
        y = "Siège actuel") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") + 
+  theme_minimal()
 
 fig6
 
@@ -632,6 +772,33 @@ fig6
 #Saving the figure in a jpg format
 ggsave(plot = fig6,
        filename = here("outputs/Figure_6.jpg"),
+       width = 10,
+       height = 6)
+```
+
+```{r}
+fig6b <- 
+  ggplot(data = result4,
+         mapping = aes(y = reorder(sieges, n, .desc = FALSE),
+                       x = n)) +
+  geom_col(linewidth = 0.3,
+           fill = "forestgreen",
+           color = "white") + 
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Nombre de patients",
+       y = "Siège actuel") +
+  theme(legend.position = "none") + 
+  theme_minimal()
+
+fig6b
+
+#Saving the figure in a jpg format
+ggsave(plot = fig6b,
+       filename = here("outputs/Figure_6b.jpg"),
        width = 10,
        height = 6)
 ```
@@ -670,21 +837,40 @@ result5 %>%
   # theme(legend.position = "none") +
   # scale_y_discrete(limits = rev)  # Pour que la barre la plus haute soit en haut
 
+# fig7 <- 
+#   ggplot(data = result5,
+#          mapping = aes(y = reorder(types_de_lesions, n, .desc = FALSE),
+#                        x = n,
+#                        fill = types_de_lesions)) +
+#   geom_col(linewidth = 0.3,
+#            color = "white") + 
+#   geom_text(mapping = aes(label = n),
+#             hjust = -0.5,
+#             color = "black",
+#             fontface = "bold",
+#             size = 4) +
+#   labs(x = "Nombre de patients",
+#        y = "Types de lésions") +
+#   theme(legend.position = "none")
+# 
+# fig7
+
 fig7 <- 
   ggplot(data = result5,
          mapping = aes(y = reorder(types_de_lesions, n, .desc = FALSE),
-                       x = n,
-                       fill = types_de_lesions)) +
+                       x = n)) +
   geom_col(linewidth = 0.3,
+           fill = "#1f78b4",
            color = "white") + 
-  geom_text(mapping = aes(label = n),
-            hjust = -0.5,
-            color = "black",
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
+            color = "white",
             fontface = "bold",
             size = 4) +
   labs(x = "Nombre de patients",
        y = "Types de lésions") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") + 
+  theme_minimal()
 
 fig7
 
@@ -696,6 +882,34 @@ ggsave(plot = fig7,
        filename = here("outputs/Figure_7.jpg"),
        width = 10,
        height = 6)
+```
+
+```{r}
+fig7b <- 
+  ggplot(data = result5,
+         mapping = aes(y = reorder(types_de_lesions, n, .desc = FALSE),
+                       x = n)) +
+  geom_col(linewidth = 0.3,
+           fill = "forestgreen",
+           color = "white") + 
+  geom_text(mapping = aes(label = n,
+                          x = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4) +
+  labs(x = "Nombre de patients",
+       y = "Types de lésions") +
+  theme(legend.position = "none") + 
+  theme_minimal()
+
+fig7b
+
+#Saving the figure
+ggsave(plot = fig7b,
+       filename = here("outputs/Figure_7b.jpg"),
+       width = 10,
+       height = 6)
+
 ```
 
 Les nodules représentent la lésion la plus prépondérante, onjectivée chez 39 patients (79,6). Ensuite sont retrouvées les masses abcédées, notamment chez 23 patients (46,9%), et les fistules chez 19 patients (38,8%). Par ailleurs, près de 32 patients (65,3%) ont plus d'un type de lésions.
@@ -753,7 +967,7 @@ ggsave(plot = fig8,
 ```
 
 ```{r}
-fig8_2 <- 
+fig8b <- 
   ggplot(result6,
          aes(x = 2,
              y = n,
@@ -773,17 +987,16 @@ fig8_2 <-
   labs(fill = "Classification clinique de Hurley") +
   theme_void()
 
-fig8_2
+fig8b
 ```
 
 ```{r}
 #Saving Fig 9b in a jpg format
-ggsave(plot = fig8_2,
+ggsave(plot = fig8b,
        filename = here("outputs/Figure_8b.jpg"),
        width = 8,
        height = 6)
 ```
-
 
 Plus de la moitié des patients (n = 28; 57,1%) sont au stade 1 de la maladie tandis que 19 patients (38,8%) sont au stade 2. Seuls 2 patients (4,1%) sont au stade 3 de la maladie.
 
@@ -878,7 +1091,7 @@ ggsave(plot = fig9,
 
 ```{r}
 # Donut chart showing Qualité de vie
- fig9_2 <- 
+ fig9b <- 
   ggplot(result7,
          aes(x = 2,
              y = n,
@@ -898,12 +1111,12 @@ ggsave(plot = fig9,
   labs(fill = "Qualité de vie") +
   theme_void()
 
-fig9_2
+fig9b
 ```
 
 ```{r}
 #Saving the figure
-ggsave(plot = fig9_2,
+ggsave(plot = fig9b,
        filename = here("outputs/Figure_9b.jpg"),
        width = 8,
        height = 6)
@@ -969,7 +1182,9 @@ fig11 <-
               size = 1,
               alpha = 0.3) +
   labs(y = "Qualité de vie",
-       x = "Sexe") + 
+       x = "Sexe",
+       fill = "Sexe") + 
+  theme_minimal() + 
   theme(legend.position = "none")
 
 fig11
@@ -1015,7 +1230,8 @@ fig12 <-
               alpha = 0.3) +
   labs(y = "Qualité de vie",
        x = "Classification clinique de Hurley") + 
-  theme(legend.position = "none")
+  theme_minimal() + 
+  theme(legend.position = "none") 
 
 fig12
 ```
@@ -1069,7 +1285,8 @@ fig13 <-
   geom_point(size = 2,
              color = "red") +
   labs(x = "Durée d'évolution de la maladie (mois)",
-       y = "Score DLQI mesurant la QdV")
+       y = "Score DLQI mesurant la QdV") + 
+  theme_minimal()
 
 fig13
 ```
@@ -1082,7 +1299,6 @@ ggsave(plot = fig13,
        height = 6)
 ```
 
-
 ```{r}
 summary(mdv$delai_devolution_en_mois)
 sd(mdv$delai_devolution_en_mois, na.rm  =T)
@@ -1092,3 +1308,220 @@ mdv %>%
   summarise(summary = summary(delai_devolution_en_mois, na.rm = T))
 ```
 
+## Sexe et sévérité de la maladie
+
+```{r}
+# Figure showing classification hurley vs sexe
+fig14 <- 
+  mdv %>% 
+  count(sexe, classification_de_hurley) %>% 
+  ggplot(aes(x = classification_de_hurley,
+             y = n,
+             fill = sexe)) + 
+  geom_col(width = 0.3,
+           color = "white",
+           position  = position_dodge(width = 0.3)) + 
+  geom_text(aes(label = n, y = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4,
+            position = position_dodge(width = 0.3)
+            ) + 
+  labs(x = "Classification clinique de Hurley",
+       y = "Nombre de patients",
+       fill = "Sexe") + 
+  theme_minimal()
+
+fig14
+
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig14,
+       filename = here("outputs/Figure_14.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+fig14b <- 
+  mdv %>% 
+  count(sexe, classification_de_hurley) %>% 
+  ggplot(aes(x = classification_de_hurley,
+             y = n,
+             fill = sexe)) + 
+  geom_col(width = 0.3,
+           color = "white",
+           position  = "stack") + 
+  geom_text(aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4
+            ) + 
+  labs(x = "Classification clinique de Hurley",
+       y = "Nombre de patients",
+       fill = "Sexe") + 
+  theme_minimal()
+
+fig14b
+
+#Saving the figure
+ggsave(plot = fig14b,
+       filename = here("outputs/Figure_14b.jpg"),
+       width = 8,
+       height = 6)
+```
+
+La figure 14 montre que des 28 patients au stade I de la maladie, 18 (64,3%) sont de sexe féminin; des 19 patients au stade II, 11 (57,9%) sont de sexe féminin. Les deux patients au stade III sont tous de sexe masculin. Cependant, il n'y avait pas de différence significative entre hommes et femmes vis-à-vis de la sévérité de la maladie (Chi-2 = 3,215; p = 0,200).
+
+```{r}
+# Chi square test for severity vs sexe
+mdv %>% 
+  count(sexe, classification_de_hurley) %>% 
+  {chisq.test(xtabs(n ~ sexe + classification_de_hurley, data = .))}
+```
+
+## Sexe et facteurs d'exposition
+
+```{r}
+fig15 <- 
+  mdv %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non précisé" ~ "Non_précisé",
+    TRUE ~ facteurs_de_risque
+  )) %>% 
+  separate_rows(facteurs_de_risque, sep = " ") %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non_précisé" ~ "Non précisé",
+    TRUE ~ facteurs_de_risque
+  )) %>% 
+#Preparing the data for plotting
+  count(facteurs_de_risque, sexe) %>% 
+  ggplot(aes(x = facteurs_de_risque,
+             y = n,
+             fill = sexe)) + 
+  geom_col(width = 0.3,
+           color = "white",
+           position  = position_dodge(width = 0.3)) + 
+  geom_text(aes(label = n, y = n/2),
+            color = "white",
+            fontface = "bold",
+            size = 4,
+            position = position_dodge(width = 0.3)
+            ) + 
+  labs(x = "Facteurs d'exposition",
+       y = "Nombre de patients",
+       fill = "Sexe") + 
+  theme_minimal()
+
+fig15
+  
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig15,
+       filename = here("outputs/Figure_15.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+fig15b <- 
+  mdv %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non précisé" ~ "Non_précisé",
+    TRUE ~ facteurs_de_risque
+  )) %>% 
+  separate_rows(facteurs_de_risque, sep = " ") %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non_précisé" ~ "Non précisé",
+    TRUE ~ facteurs_de_risque
+  )) %>% 
+#Preparing the data for plotting
+  count(facteurs_de_risque, sexe) %>% 
+  ggplot(aes(x = facteurs_de_risque,
+             y = n,
+             fill = sexe)) + 
+  geom_col(width = 0.3,
+           color = "white",
+           position  = "stack") + 
+  geom_text(aes(label = n),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold",
+            size = 4
+            ) + 
+  labs(x = "Facteurs d'exposition",
+       y = "Nombre de patients",
+       fill = "Sexe") + 
+  theme_minimal()
+
+fig15b
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig15b,
+       filename = here("outputs/Figure_15b.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+# Chi square test for severity vs sexe
+mdv %>% 
+  count(sexe, facteurs_de_risque) %>% 
+  {chisq.test(xtabs(n ~ sexe + facteurs_de_risque, data = .))}
+```
+
+Des 7 et 5 patients présentant une obésité et des antécédents familiaux de MDV, 4 (57,1% et 80,0% respectivement) étaient des femmes tandis que des 4 patients fumeurs, 3 (75,0%) étaient des hommes. Il n'y a pas de différence entre hommes et femmes sur les facteurs d'exposition (Chi-2 = 5,10; p = 0,404). 
+
+## Facteurs d'exposition et QdV
+
+```{r}
+fig16 <- 
+mdv %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non précisé" ~ "Non_précisé",
+    TRUE ~ facteurs_de_risque
+  )) %>% 
+  separate_rows(facteurs_de_risque, sep = " ") %>% 
+  mutate(facteurs_de_risque = case_when(
+    facteurs_de_risque == "Non_précisé" ~ "Non précisé",
+    TRUE ~ facteurs_de_risque)) %>% 
+  filter(facteurs_de_risque == c("Obésité", "Hérédité", "Tabac")) %>% 
+  ggplot(aes(x = facteurs_de_risque,
+             y = total_dlqi,
+             fill = facteurs_de_risque)) +
+  geom_boxplot(color = "black",
+               linewidth = 0.4) + 
+  geom_jitter(color = "black",
+              width = 0.2,
+              size = 1,
+              alpha = 0.3) +
+  labs(y = "Qualité de vie",
+       x = "Facteurs d'exposition") + 
+  theme_minimal() + 
+  theme(legend.position = "none") 
+
+fig16
+      
+```
+
+```{r}
+#Saving the figure
+ggsave(plot = fig16,
+       filename = here("outputs/Figure_16.jpg"),
+       width = 8,
+       height = 6)
+```
+
+```{r}
+# Test de Kruskal-Wallis; pour rappel: variable non ghaussienne
+kruskal.test(total_dlqi ~ facteurs_de_risque, data = mdv) # Kruskal-Wallis chi-squared = 2.1317, df = 4, p-value = 0.7115
+```
+
+La figure 16 montre qu'il n'y a pas de différence dans l'altération de la qualité de vie entre les patients ayant les trois comorbidités répertoriées, notamment obésité, tabac et hérédité/ATCD familiaux de MDV (p = 0,712).
